@@ -1,6 +1,5 @@
 import ReTree from 're-tree'
 import UaDeviceDetector from 'ua-device-detector'
-import webVoiceSDK from '@linto-ai/webvoicesdk'
 import MqttClient from './mqtt.js'
 import * as axios from 'axios'
 import base64Js from 'base64-js'
@@ -27,49 +26,43 @@ export default class Linto extends EventTarget {
         } else {
             this.mic = new webVoiceSDK.Mic() // uses webVoiceSDK.Mic.defaultOptions
         }
-        this.mic = new webVoiceSDK.Mic()
-        this.downSampler = new webVoiceSDK.DownSampler()
-        this.vad = new webVoiceSDK.Vad()
-        this.speechPreemphaser = new webVoiceSDK.SpeechPreemphaser()
-        this.featuresExtractor = new webVoiceSDK.FeaturesExtractor()
-        this.hotword = new webVoiceSDK.Hotword()
-        this.recorder = new webVoiceSDK.Recorder()
+
         // Init
         return this.start()
     }
 
     async start() {
-        let auth
         try {
-            auth = await axios.post(this.httpAuthServer, {
+            let auth = await axios.post(this.httpAuthServer, {
                 "requestToken": this.requestToken
             }, {
                 headers: {
                     "Content-Type": "application/json"
                 }
             })
+            this.userInfo = auth.data.user
+            this.mqttInfo = auth.data.mqttConfig
+            this.mqtt.connect(this.userInfo, this.mqttInfo)
+            await this.startAudio()
+   
+       
         } catch (e) {
             console.log(e)
-            return e
         }
-        console.log(auth)
-        this.userInfo = auth.data.user
-        this.mqttInfo = auth.data.mqttConfig
-        await this.mqtt.connect(this.userInfo, this.mqttInfo)
-        await this.#startAudio()
         return this
     }
 
-    async #startAudio() {
-        await this.downSampler.start(mic)
-        await this.vad.start(mic)
+    async startAudio() {
+        console.log('"sdfsdfsdf')
+        await this.downSampler.start(this.mic)
+       
+        await this.vad.start(this.mic)
         await this.speechPreemphaser.start(downSampler)
         await this.featuresExtractor.start(speechPreemphaser)
         await this.hotword.start(feat, vad)
         await this.hotword.loadModel(hotword.availableModels["linto"])
         await mic.start()
         await rec.start(downSampler)
-        console.log("hey")
     }
 
     async stop() {}

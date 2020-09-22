@@ -7,6 +7,7 @@ export function mqttConnectHandler(){
                 "connexion":"online",
                 "on":new Date().toJSON()
             }
+            console.log("ok")
             this.publish('status',payload,2,false,true)
         } else {
             console.log(e)

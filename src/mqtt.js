@@ -34,16 +34,12 @@ export default class MqttClient extends EventTarget {
             cnxParam.username = mqttInfo.mqtt_login
             cnxParam.password = mqttInfo.mqtt_password
         }
-
         this.client = mqtt.connect(mqttInfo.host, cnxParam)
         this.client.addListener("connect", mqttConnectHandler.bind(this))
         this.client.addListener("disconnect", mqttDisconnectHandler.bind(this))
         this.client.addListener("error", mqttConnectHandler.bind(this))
         this.client.addListener("offline", mqttConnectHandler.bind(this))
         this.client.addListener("message", mqttMessageHandler.bind(this))
-        return new Promise((resolve, reject)=>{
-
-        })
     }
 
     publish(topic, value, qos = 2, retain = false, requireOnline = true) {
