@@ -1,8 +1,9 @@
 import webVoiceSDK from '@linto-ai/webvoicesdk'
 import * as mqtt from 'mqtt'
 import base64Js from 'base64-js'
-console.log(base64Js)
 import recorder from '@linto-ai/webvoicesdk/src/webvoicesdk/nodes/recorder'
+
+
 
 let sn = 222222
 
@@ -84,7 +85,6 @@ window.start = async function () {
     client.subscribe('blk/tolinto/222222/#')
     client.addListener('message',(d,p)=>{
         speechSynthesis.speak(new SpeechSynthesisUtterance(JSON.parse(p.toString()).behavior.say.text));
-        
     })
     
 }
