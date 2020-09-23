@@ -5,7 +5,8 @@ export default class MqttClient extends EventTarget {
 
     constructor() {
         super()
-        this.conversationData = {} // context for long running transactions
+        this.conversationData = {} // Context for long running transactions (interactive asks)
+        this.pendingCommandIds = new Array() // Currently being processed ids
     }
 
     connect(userInfo, mqttInfo) {
@@ -37,7 +38,7 @@ export default class MqttClient extends EventTarget {
         this.client.addListener("disconnect", handlers.mqttDisconnect.bind(this))
         this.client.addListener("error", handlers.mqttError.bind(this))
         this.client.addListener("offline", handlers.mqttOffline.bind(this))
-        //this.client.addListener("message", handlers.mqttMessage.bind(this))
+        this.client.addListener("message", handlers.mqttMessage.bind(this))
         this.client.addListener('message',(d,p)=>{
             console.log("message",d,p)
             try {
@@ -49,36 +50,43 @@ export default class MqttClient extends EventTarget {
         })
     }
 
-    publish(topic, value, qos = 2, retain = false, requireOnline = true) {
-        value.auth_token = `WebApplication ${this.userInfo.auth_token}`
-        const pubTopic = `${this.egress}/${topic}`
-        const pubOptions = {
-            "qos": qos,
-            "retain": retain
-        }
-        if (requireOnline === true) {
-            if (this.client.connected !== true) return
-            this.client.publish(pubTopic, JSON.stringify(value), pubOptions, (err) => {
-                this.dispatchEvent(new CustomEvent("mqtt_error"), err)
-            })
-        }
+    async publish(topic, value, qos = 2, retain = false, requireOnline = true) {
+        return new Promise((resolve, reject)=>{
+            value.auth_token = `WebApplication ${this.userInfo.auth_token}`
+            const pubTopic = `${this.egress}/${topic}`
+            const pubOptions = {
+                "qos": qos,
+                "retain": retain
+            }
+            if (requireOnline === true) {
+                if (this.client.connected !== true) return
+                this.client.publish(pubTopic, JSON.stringify(value), pubOptions, (err) => {
+                    if (err) return reject(err)
+                    return resolve()
+                })
+            }
+        })
     }
 
 
-    publishAudioCommand(b64Audio) {
-        const pubOptions = {
-            "qos": 0,
-            "retain": false
-        }
-        const fileId = Math.random().toString(16).substring(4)
-        const pubTopic = `${this.egress}/nlp/file/${fileId}`
-        const payload = {
-            "audio": b64Audio,
-            "auth_token":`WebApplication ${this.userInfo.auth_token}`,
-            "conversationData": this.conversationData
-        }
-        this.client.publish(pubTopic, JSON.stringify(payload), pubOptions, (err) => {
-            if (err) return reject(err)
+    async publishAudioCommand(b64Audio) {
+        return new Promise((resolve, reject)=>{
+            const pubOptions = {
+                "qos": 0,
+                "retain": false
+            }
+            const fileId = Math.random().toString(36).substring(4)
+            const pubTopic = `${this.egress}/nlp/file/${fileId}`
+            const payload = {
+                "audio": b64Audio,
+                "auth_token":`WebApplication ${this.userInfo.auth_token}`,
+                "conversationData": this.conversationData
+            }
+            this.client.publish(pubTopic, JSON.stringify(payload), pubOptions, (err) => {
+                if (err) return reject(err)
+                this.pendingCommandIds.push(fileId)
+                return resolve()
+            })
         })
     }
 

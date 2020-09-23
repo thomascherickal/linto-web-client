@@ -47,12 +47,16 @@ export default class Linto extends EventTarget {
     }
 
     listenCommand() {
-            this.audio.listenCommand()
+        this.audio.listenCommand()
     }
 
-    async sendCommand(){
-        const b64Audio = await this.audio.getCommand()
-        this.mqtt.publishAudioCommand(b64Audio)
+    async sendCommand() {
+        try {
+            const b64Audio = await this.audio.getCommand()
+            await this.mqtt.publishAudioCommand(b64Audio)
+        } catch (e) {
+            this.dispatchEvent(new CustomEvent("command_error", e))
+        }
     }
 }
 

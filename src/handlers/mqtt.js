@@ -1,15 +1,19 @@
-export function mqttConnect() {
+export async function mqttConnect() {
     //clear any previous subs
     this.client.unsubscribe(this.ingress)
-    this.client.subscribe(this.ingress, (e) => {
+    this.client.subscribe(this.ingress, async (e) => {
         if (!e) {
             let payload = {
                 "connexion": "online",
                 "auth_token": `WebApplication ${this.userInfo.auth_token}`,
                 "on": new Date().toJSON()
             }
-            this.publish('status', payload, 2, false, true)
-            this.dispatchEvent(new CustomEvent("connect"))
+            try {
+                await this.publish('status', payload, 2, false, true)
+                this.dispatchEvent(new CustomEvent("connect"))
+            } catch (err){
+                this.dispatchEvent(new CustomEvent("connect_fail", err))
+            }
         } else {
             this.dispatchEvent(new CustomEvent("connect_fail", e))
         }
