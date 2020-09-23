@@ -1,20 +1,17 @@
 import * as mqtt from 'mqtt'
-import {
-    mqttConnectHandler,
-    mqttDisconnectHandler,
-    mqttMessageHandler
-} from "./handlers/mqttevents"
+import * as handlers from "./handlers/mqtt"
 
 export default class MqttClient extends EventTarget {
 
     constructor() {
         super()
+        this.conversationData = {} // context for long running transactions
     }
 
     connect(userInfo, mqttInfo) {
         this.userInfo = userInfo
-        this.ingress = `${userInfo.topic}/${userInfo.session_id}/tolinto/#` // Everything to receive by this instance
-        this.egress = `${userInfo.topic}/${userInfo.session_id}/fromlinto` // Base for sent messages
+        this.ingress = `${userInfo.topic}/tolinto/${userInfo.session_id}/#` // Everything to receive by this instance
+        this.egress = `${userInfo.topic}/fromlinto/${userInfo.session_id}` // Base for sent messages
 
         const cnxParam = {
             clean: true,
@@ -35,14 +32,25 @@ export default class MqttClient extends EventTarget {
             cnxParam.password = mqttInfo.mqtt_password
         }
         this.client = mqtt.connect(mqttInfo.host, cnxParam)
-        this.client.addListener("connect", mqttConnectHandler.bind(this))
-        this.client.addListener("disconnect", mqttDisconnectHandler.bind(this))
-        this.client.addListener("error", mqttConnectHandler.bind(this))
-        this.client.addListener("offline", mqttConnectHandler.bind(this))
-        this.client.addListener("message", mqttMessageHandler.bind(this))
+        // Listen events from this.client (mqtt client)
+        this.client.addListener("connect", handlers.mqttConnect.bind(this))
+        this.client.addListener("disconnect", handlers.mqttDisconnect.bind(this))
+        this.client.addListener("error", handlers.mqttError.bind(this))
+        this.client.addListener("offline", handlers.mqttOffline.bind(this))
+        //this.client.addListener("message", handlers.mqttMessage.bind(this))
+        this.client.addListener('message',(d,p)=>{
+            console.log("message",d,p)
+            try {
+                speechSynthesis.speak(new SpeechSynthesisUtterance(JSON.parse(p.toString()).behavior.say.phonetic));
+            } catch(e){
+                console.log(e)
+            }
+            
+        })
     }
 
     publish(topic, value, qos = 2, retain = false, requireOnline = true) {
+        value.auth_token = `WebApplication ${this.userInfo.auth_token}`
         const pubTopic = `${this.egress}/${topic}`
         const pubOptions = {
             "qos": qos,
@@ -50,15 +58,28 @@ export default class MqttClient extends EventTarget {
         }
         if (requireOnline === true) {
             if (this.client.connected !== true) return
-            this.client.publish(pubTopic, JSON.stringify(value), pubOptions, function (err) {
-                if (err) console.log(err)
+            this.client.publish(pubTopic, JSON.stringify(value), pubOptions, (err) => {
+                this.dispatchEvent(new CustomEvent("mqtt_error"), err)
             })
         }
     }
 
 
-    publishAudioCommand() {
-
+    publishAudioCommand(b64Audio) {
+        const pubOptions = {
+            "qos": 0,
+            "retain": false
+        }
+        const fileId = Math.random().toString(16).substring(4)
+        const pubTopic = `${this.egress}/nlp/file/${fileId}`
+        const payload = {
+            "audio": b64Audio,
+            "auth_token":`WebApplication ${this.userInfo.auth_token}`,
+            "conversationData": this.conversationData
+        }
+        this.client.publish(pubTopic, JSON.stringify(payload), pubOptions, (err) => {
+            if (err) return reject(err)
+        })
     }
 
     disconnect() {

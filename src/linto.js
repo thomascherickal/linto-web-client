@@ -1,6 +1,8 @@
 import ReTree from 're-tree'
 import UaDeviceDetector from 'ua-device-detector'
 import MqttClient from './mqtt.js'
+import Audio from './audio.js'
+import * as handlers from './handlers/linto.js'
 import * as axios from 'axios'
 import base64Js from 'base64-js'
 
@@ -11,61 +13,47 @@ export default class Linto extends EventTarget {
         // Server connexion
         this.httpAuthServer = httpAuthServer
         this.requestToken = requestToken
-        this.mqtt = new MqttClient(this.mqttInfo)
+        this.mqtt = new MqttClient()
+        this.mqtt.addEventListener("connect", handlers.mqttConnect.bind(this))
+        this.mqtt.addEventListener("connect_fail", handlers.mqttConnectFail.bind(this))
+        this.mqtt.addEventListener("error", handlers.mqttError.bind(this))
+        this.mqtt.addEventListener("disconnect", handlers.mqttDisconnect.bind(this))
         // WebvoiceSDK
-        if (this.browser.isMobile()) {
-            this.mic = new webVoiceSDK.Mic({
-                sampleRate: 44100,
-                frameSize: 4096,
-                constraints: {
-                    echoCancellation: false,
-                    autoGainControl: false,
-                    noiseSuppression: false
-                }
-            })
-        } else {
-            this.mic = new webVoiceSDK.Mic() // uses webVoiceSDK.Mic.defaultOptions
-        }
-
+        this.audio = new Audio(this.browser.isMobile())
+        this.audio.vad.addEventListener("speakingStatus", handlers.vadStatus.bind(this))
+        this.audio.hotword.addEventListener("hotword", handlers.hotword.bind(this))
         // Init
-        return this.start()
+        return this.login()
     }
 
-    async start() {
-        try {
-            let auth = await axios.post(this.httpAuthServer, {
-                "requestToken": this.requestToken
-            }, {
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            })
-            this.userInfo = auth.data.user
-            this.mqttInfo = auth.data.mqttConfig
-            this.mqtt.connect(this.userInfo, this.mqttInfo)
-            await this.startAudio()
-   
-       
-        } catch (e) {
-            console.log(e)
-        }
-        return this
+    async login() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let auth = await axios.post(this.httpAuthServer, {
+                    "requestToken": this.requestToken
+                }, {
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                })
+                this.userInfo = auth.data.user
+                this.mqttInfo = auth.data.mqttConfig
+                this.mqtt.connect(this.userInfo, this.mqttInfo)
+            } catch (e) {
+                reject(e)
+            }
+            resolve(this)
+        })
     }
 
-    async startAudio() {
-        console.log('"sdfsdfsdf')
-        await this.downSampler.start(this.mic)
-       
-        await this.vad.start(this.mic)
-        await this.speechPreemphaser.start(downSampler)
-        await this.featuresExtractor.start(speechPreemphaser)
-        await this.hotword.start(feat, vad)
-        await this.hotword.loadModel(hotword.availableModels["linto"])
-        await mic.start()
-        await rec.start(downSampler)
+    listenCommand() {
+            this.audio.listenCommand()
     }
 
-    async stop() {}
+    async sendCommand(){
+        const b64Audio = await this.audio.getCommand()
+        this.mqtt.publishAudioCommand(b64Audio)
+    }
 }
 
 window.Linto = Linto
