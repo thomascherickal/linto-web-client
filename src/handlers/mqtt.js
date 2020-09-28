@@ -31,8 +31,12 @@ export function mqttMessage(topic, payload) {
         const topicArray = topic.split("/")
         const action = topicArray[3] // i.e nlp
         const message = new Object()
-        message.payload = JSON.parse(payload.toString())
-        message.actionId = topicArray[4] // i.e eiydaeji
+        switch(action){
+            case "nlp":
+                message.payload = JSON.parse(payload.toString())
+                speechSynthesis.speak(new SpeechSynthesisUtterance(message.payload.behavior.say.phonetic))
+                break
+        }
         this.dispatchEvent(new CustomEvent(action, {
             detail: message
         }))

@@ -48,9 +48,18 @@ export default class Linto extends EventTarget {
     /******************************
      * Application state management
      ******************************/
-    startAudioAcquisition() {
+    triggerHotWord(dummyHotwordName = "dummy") {
+        this.audio.vad.dispatchEvent(new CustomEvent("speaking", {
+            detail: true
+        }))
+        this.audio.hotword.dispatchEvent(new CustomEvent("hotword", {
+            detail: dummyHotwordName
+        }))
+    }
+
+    startAudioAcquisition(useHotword = true, hotwordModel = "linto") {
         if (!this.audio) {
-            this.audio = new Audio(this.browser.isMobile())
+            this.audio = new Audio(this.browser.isMobile(), useHotword, hotwordModel)
             this.audio.vad.addEventListener("speakingStatus", handlers.vadStatus.bind(this))
         }
     }
@@ -78,7 +87,7 @@ export default class Linto extends EventTarget {
         if (!this.commandPipeline) {
             this.commandPipeline = true
             this.audio.hotword.addEventListener("hotword", handlers.hotword.bind(this))
-            this.mqtt.addEventListener("nlp",handlers.nlpAction.bind(this))
+            this.mqtt.addEventListener("nlp", handlers.nlpAction.bind(this))
         }
     }
 
@@ -86,7 +95,7 @@ export default class Linto extends EventTarget {
         if (this.commandPipeline) {
             this.commandPipeline = false
             this.audio.hotword.removeEventListener("hotword", handlers.hotword.bind(this))
-            this.mqtt.removeEventListener("nlp",handlers.nlpAction.bind(this))
+            this.mqtt.removeEventListener("nlp", handlers.nlpAction.bind(this))
         }
     }
 

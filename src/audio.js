@@ -3,8 +3,10 @@ import base64Js from 'base64-js'
 
 
 export default class Audio extends EventTarget {
-    constructor(isMobile) {
+    constructor(isMobile, useHotword = true, hotwordModel = "linto") {
         super()
+        this.useHotword = useHotword
+        this.hotwordModel = hotwordModel
         if (isMobile) {
             this.mic = new webVoiceSDK.Mic({
                 sampleRate: 44100,
@@ -37,8 +39,10 @@ export default class Audio extends EventTarget {
             await this.vad.start(this.mic)
             await this.speechPreemphaser.start(this.downSampler)
             await this.featuresExtractor.start(this.speechPreemphaser)
-            await this.hotword.start(this.featuresExtractor, this.vad)
-            await this.hotword.loadModel(this.hotword.availableModels["linto"])
+            if (this.useHotword) {
+                await this.hotword.start(this.featuresExtractor, this.vad)
+                await this.hotword.loadModel(this.hotword.availableModels[this.hotwordModel])
+            }
             await this.mic.start()
             await this.recorder.start(this.downSampler)
         } catch (e) {
@@ -46,38 +50,36 @@ export default class Audio extends EventTarget {
         }
     }
 
-    async stop(){
+    async stop() {
         await this.downSampler.stop()
         await this.vad.stop()
         await this.speechPreemphaser.stop()
         await this.featuresExtractor.stop()
-        await this.hotword.stop()
+        if (this.useHotword) await this.hotword.stop()
         await this.mic.stop()
     }
 
-    pause(){
+    pause() {
         this.mic.pause()
     }
 
-    resume(){
+    resume() {
         this.mic.resume()
     }
 
-    startStreaming(){
+    startStreaming() {
         this.downSampler.addEventListener()
     }
 
-    stopStreaming(){
+    stopStreaming() {
         this.downSampler.removeEventListener()
     }
 
-    async listenCommand()
-    {
+    async listenCommand() {
         this.recorder.punchIn()
     }
 
-    async getCommand()
-    {
+    async getCommand() {
         const audioBlob = this.recorder.punchOut()
         const audioBuffer = await fetch(audioBlob, {
             method: 'GET'

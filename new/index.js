@@ -16,7 +16,7 @@ let audioSpeakingOn = function(event){
     console.log("speaking")
 }
 
-let audioSpeakingOff = async function(event){
+let audioSpeakingOff = function(event){
     console.log("Not speaking")
 }
 
@@ -28,8 +28,8 @@ let commandPublished = function(event){
     console.log("command published id :", event.detail)
 }
 
-let hotword = async function(event){
-    console.log("Hotword triggered")
+let hotword = function(event){
+    console.log("Hotword triggered : ", event.detail)
 }
 
 let commandTimeout = function(event){
@@ -39,7 +39,7 @@ let commandTimeout = function(event){
 
 window.start = async function () {
     try {
-        window.linto = await new Linto("https://stage.linto.ai/overwatch/local/web/login","8Krjlt3SXRA1V5OG")
+        window.linto = await new Linto("https://stage.linto.ai/overwatch/local/web/login","8Krjlt3SXRA1V5OG",10000)
         // Some feedbacks for UX implementation
         linto.addEventListener("mqtt_connect",mqttConnectHandler)
         linto.addEventListener("mqtt_connect_fail",mqttConnectFailHandler)
@@ -50,10 +50,9 @@ window.start = async function () {
         linto.addEventListener("command_published", commandPublished)
         linto.addEventListener("command_timeout", commandTimeout)
         linto.addEventListener("hotword_on", hotword)
-        linto.startAudioAcquisition()
+        linto.startAudioAcquisition(true, "linto") // Uses hotword built in WebVoiceSDK by name
         linto.startCommandPipeline()
-    } catch(e)
-    {
+    } catch(e) {
         console.log(e)
     }
     
