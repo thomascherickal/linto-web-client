@@ -17,40 +17,46 @@ let audioSpeakingOn = function(event){
 }
 
 let audioSpeakingOff = async function(event){
-    console.log("Command acquired !")
-    let commandId = linto.sendCommand()
-    linto.removeEventListener("speaking_off", audioSpeakingOff)
-    linto.audio.hotword.resume()
+    console.log("Not speaking")
+}
+
+let commandAcquired = function(event){
+    console.log("command acquired")
+}
+
+let commandPublished = function(event){
+    console.log("command published id :", event.detail)
 }
 
 let hotword = async function(event){
-    console.log("Starting voice command")
-    linto.addEventListener("speaking_off", audioSpeakingOff)
-    linto.listenCommand()
-    linto.audio.hotword.pause()
+    console.log("Hotword triggered")
+}
+
+let commandTimeout = function(event){
+    console.log("Command timeout :( id : ", event.detail)
 }
 
 
 window.start = async function () {
     try {
         window.linto = await new Linto("https://stage.linto.ai/overwatch/local/web/login","8Krjlt3SXRA1V5OG")
+        // Some feedbacks for UX implementation
         linto.addEventListener("mqtt_connect",mqttConnectHandler)
         linto.addEventListener("mqtt_connect_fail",mqttConnectFailHandler)
         linto.addEventListener("mqtt_error", mqttErrorHandler)
         linto.addEventListener("speaking_on", audioSpeakingOn)
-        //linto.addEventListener("speaking_off", audioSpeakingOff)
+        linto.addEventListener("speaking_off", audioSpeakingOff)
+        linto.addEventListener("command_acquired", commandAcquired)
+        linto.addEventListener("command_published", commandPublished)
+        linto.addEventListener("command_timeout", commandTimeout)
         linto.addEventListener("hotword_on", hotword)
+        linto.startAudioAcquisition()
+        linto.startCommandPipeline()
     } catch(e)
     {
         console.log(e)
     }
     
 }
-
-window.stop = async function () {
-
-}
-
-
 
 start()

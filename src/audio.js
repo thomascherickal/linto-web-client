@@ -46,6 +46,31 @@ export default class Audio extends EventTarget {
         }
     }
 
+    async stop(){
+        await this.downSampler.stop()
+        await this.vad.stop()
+        await this.speechPreemphaser.stop()
+        await this.featuresExtractor.stop()
+        await this.hotword.stop()
+        await this.mic.stop()
+    }
+
+    pause(){
+        this.mic.pause()
+    }
+
+    resume(){
+        this.mic.resume()
+    }
+
+    startStreaming(){
+        this.downSampler.addEventListener()
+    }
+
+    stopStreaming(){
+        this.downSampler.removeEventListener()
+    }
+
     async listenCommand()
     {
         this.recorder.punchIn()

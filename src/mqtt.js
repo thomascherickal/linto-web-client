@@ -39,15 +39,6 @@ export default class MqttClient extends EventTarget {
         this.client.addListener("error", handlers.mqttError.bind(this))
         this.client.addListener("offline", handlers.mqttOffline.bind(this))
         this.client.addListener("message", handlers.mqttMessage.bind(this))
-        this.client.addListener('message',(d,p)=>{
-            console.log("message",d,p)
-            try {
-                speechSynthesis.speak(new SpeechSynthesisUtterance(JSON.parse(p.toString()).behavior.say.phonetic));
-            } catch(e){
-                console.log(e)
-            }
-            
-        })
     }
 
     async publish(topic, value, qos = 2, retain = false, requireOnline = true) {
@@ -85,7 +76,7 @@ export default class MqttClient extends EventTarget {
             this.client.publish(pubTopic, JSON.stringify(payload), pubOptions, (err) => {
                 if (err) return reject(err)
                 this.pendingCommandIds.push(fileId)
-                return resolve()
+                return resolve(fileId)
             })
         })
     }
@@ -95,5 +86,3 @@ export default class MqttClient extends EventTarget {
     }
 
 }
-
-window.m = new MqttClient()

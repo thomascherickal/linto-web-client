@@ -11,18 +11,34 @@ export async function mqttConnect() {
             try {
                 await this.publish('status', payload, 2, false, true)
                 this.dispatchEvent(new CustomEvent("connect"))
-            } catch (err){
-                this.dispatchEvent(new CustomEvent("connect_fail", err))
+            } catch (err) {
+                this.dispatchEvent(new CustomEvent("connect_fail", {
+                    detail: err
+                }))
             }
         } else {
-            this.dispatchEvent(new CustomEvent("connect_fail", e))
+            this.dispatchEvent(new CustomEvent("connect_fail", {
+                detail: e
+            }))
         }
     })
 }
 
 
 export function mqttMessage(topic, payload) {
-
+    try {
+        // exemple topc appa62499241959338bdba1e118d6988f4d/tolinto/WEB_c3dSEMd014aE/nlp/file/eiydaeji 
+        const topicArray = topic.split("/")
+        const action = topicArray[3] // i.e nlp
+        const message = new Object()
+        message.payload = JSON.parse(payload.toString())
+        message.actionId = topicArray[4] // i.e eiydaeji
+        this.dispatchEvent(new CustomEvent(action, {
+            detail: message
+        }))
+    } catch (e) {
+        this.dispatchEvent(new CustomEvent("mqtt_message_error", e))
+    }
 }
 
 export function mqttDisconnect() {
@@ -30,10 +46,10 @@ export function mqttDisconnect() {
 }
 
 
-export function mqttOffline(){
+export function mqttOffline() {
 
 }
 
-export function mqttError(){
+export function mqttError() {
 
 }
