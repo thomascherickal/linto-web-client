@@ -1,103 +1,83 @@
-import webVoiceSDK from '@linto-ai/webvoicesdk'
-import * as mqtt from 'mqtt'
-import base64Js from 'base64-js'
-import recorder from '@linto-ai/webvoicesdk/src/webvoicesdk/nodes/recorder'
+import Linto from '../src/linto.js'
 
-
-
-let sn = 222222
-
-function _arrayBufferToBase64( buffer ) {
-    var binary = '';
-    var len = buffer.byteLength;
-    for (var i = 0; i < len; i++) {
-        binary += buffer[i];
-    }
-    return window.btoa( binary );
- }
-
-async function publishaudio(audio, conversationData = {}){
-    const pubOptions = {
-        "qos": 0,
-        "retain": false
-    }
-    const fileId = Math.random().toString(16).substring(4)
-    const pubTopic = `blk/fromlinto/${sn}/nlp/file/${fileId}`
-    const sendFile = audio
-    const payload = {
-        "audio": sendFile,
-        "conversationData": conversationData
-    }
-    client.publish(pubTopic, JSON.stringify(payload), pubOptions, (err) => {
-        if (err) return reject(err)
-    })
+let mqttConnectHandler = function (event) {
+    console.log("mqtt up !")
 }
 
-const VADHandler = async function (speakingEvent) {
-    if (speakingEvent.detail){
-        console.log("speaking")
-    } else {
-        if (hotword.status == "non-emitting"){
-            let audioFile = rec.punchOut()
-            const audioFileBuffer = await fetch(audioFile, {
-                method: 'GET'
-            })
-            const final = await audioFileBuffer.arrayBuffer()
-            const vue = new Int8Array(final)
-            const lol = base64Js.fromByteArray(vue)
-            publishaudio(lol)
-            hotword.resume()
-        }
-    }
+let mqttConnectFailHandler = function (event) {
+    console.log(event)
 }
 
-const HotwordHandler = function (hotWordEvent) {
-    hotword.pause()
-    rec.punchIn()
+let mqttErrorHandler = function (event) {
+    console.log(event)
 }
 
-window.mqtt = mqtt
+let audioSpeakingOn = function (event) {
+    console.log("speaking")
+}
 
-window.client = mqtt.connect("wss://stage.linto.ai/mqtt",{
-    "username":"linagora",
-    "password":"argonail"
-})
+let audioSpeakingOff = function (event) {
+    console.log("Not speaking")
+}
+
+let commandAcquired = function (event) {
+    console.log("command acquired")
+}
+
+let commandPublished = function (event) {
+    console.log("command published id :", event.detail)
+}
+
+let hotword = function (event) {
+    console.log("Hotword triggered : ", event.detail)
+}
+
+let commandTimeout = function (event) {
+    console.log("Command timeout :( id : ", event.detail)
+}
+
+let sayFeedback = async function (event) {
+    console.log(event)
+    console.log("saying : ", event.detail.behavior.say.text)
+    await linto.say(linto.lang, event.detail.behavior.say.text)
+}
+
+let askFeedback = async function (event) {
+    console.log("asking : ", event.detail.behavior.ask.text)
+    await linto.ask(linto.lang, event.detail.behavior.ask.text)
+}
+
+let customHandler = async function(event){
+    console.log(`${event.type} fired`)
+}
+
 
 
 window.start = async function () {
-    window.mic = new webVoiceSDK.Mic()
-    window.downSampler = new webVoiceSDK.DownSampler()
-    window.vad = new webVoiceSDK.Vad()
-    window.speechPreemphaser = new webVoiceSDK.SpeechPreemphaser()
-    window.feat = new webVoiceSDK.FeaturesExtractor()
-    window.hotword = new webVoiceSDK.Hotword()
-    window.rec = new webVoiceSDK.Recorder()
-    await downSampler.start(mic)
-    await vad.start(mic)
-    await speechPreemphaser.start(downSampler)
-    await feat.start(speechPreemphaser)
-    await hotword.start(feat, vad)
-    await hotword.loadModel(hotword.availableModels["linto"])
-    await mic.start()
-    await rec.start(downSampler)
-    hotword.addEventListener("hotword", HotwordHandler)
-    vad.addEventListener("speakingStatus", VADHandler)
-    client.subscribe('blk/tolinto/222222/#')
-    client.addListener('message',(d,p)=>{
-        speechSynthesis.speak(new SpeechSynthesisUtterance(JSON.parse(p.toString()).behavior.say.text));
-    })
-    
+    try {
+        window.linto = new Linto("https://stage.linto.ai/overwatch/local/web/login", "8Krjlt3SXRA1V5OG", 10000)
+        // Some feedbacks for UX implementation
+        linto.addEventListener("mqtt_connect", mqttConnectHandler)
+        linto.addEventListener("mqtt_connect_fail", mqttConnectFailHandler)
+        linto.addEventListener("mqtt_error", mqttErrorHandler)
+        linto.addEventListener("speaking_on", audioSpeakingOn)
+        linto.addEventListener("speaking_off", audioSpeakingOff)
+        linto.addEventListener("command_acquired", commandAcquired)
+        linto.addEventListener("command_published", commandPublished)
+        linto.addEventListener("command_timeout", commandTimeout)
+        linto.addEventListener("hotword_on", hotword)
+        linto.addEventListener("say_feedback_from_skill", sayFeedback)
+        linto.addEventListener("ask_feedback_from_skill", askFeedback)
+        linto.addEventListener("custom1", customHandler)
+        await linto.login()
+        linto.startAudioAcquisition(true, "linto", 0.99) // Uses hotword built in WebVoiceSDK by name / model / threshold (0.99 is fine enough)
+        linto.startCommandPipeline()
+        return true
+    } catch (e) {
+        console.log(e)
+        return e.message
+    }
+
 }
-
-window.stop = async function () {
-    await downSampler.stop()
-    await vad.stop()
-    await speechPreemphaser.stop()
-    await feat.stop()
-    await hotword.stop(feat, vad)
-}
-
-
 
 start()
-//client.publish("salut_mon_grand","yes",{qos:0})

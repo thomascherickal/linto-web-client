@@ -2,7 +2,6 @@ import * as mqtt from 'mqtt'
 import * as handlers from "./handlers/mqtt"
 
 export default class MqttClient extends EventTarget {
-
     constructor() {
         super()
         this.conversationData = {} // Context for long running transactions (interactive asks)
@@ -59,7 +58,6 @@ export default class MqttClient extends EventTarget {
         })
     }
 
-
     async publishAudioCommand(b64Audio) {
         return new Promise((resolve, reject)=>{
             const pubOptions = {
@@ -83,6 +81,10 @@ export default class MqttClient extends EventTarget {
 
     disconnect() {
         this.client.end()
+    }
+    
+    startStreaming(){
+        this.publish(`${this.egress}/streaming/start/`,{},2,false,true)
     }
 
 }

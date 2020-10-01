@@ -3,10 +3,11 @@ import base64Js from 'base64-js'
 
 
 export default class Audio extends EventTarget {
-    constructor(isMobile, useHotword = true, hotwordModel = "linto") {
+    constructor(isMobile, useHotword = true, hotwordModel = "linto", threshold = 0.99) {
         super()
         this.useHotword = useHotword
         this.hotwordModel = hotwordModel
+        this.threshold = threshold
         if (isMobile) {
             this.mic = new webVoiceSDK.Mic({
                 sampleRate: 44100,
@@ -40,7 +41,7 @@ export default class Audio extends EventTarget {
             await this.speechPreemphaser.start(this.downSampler)
             await this.featuresExtractor.start(this.speechPreemphaser)
             if (this.useHotword) {
-                await this.hotword.start(this.featuresExtractor, this.vad)
+                await this.hotword.start(this.featuresExtractor, this.vad, this.threshold)
                 await this.hotword.loadModel(this.hotword.availableModels[this.hotwordModel])
             }
             await this.mic.start()

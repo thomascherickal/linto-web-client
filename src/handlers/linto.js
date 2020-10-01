@@ -9,7 +9,7 @@ export function vadStatus(event) {
 export function hotword(hotWordEvent) {
     this.dispatchEvent(new CustomEvent("hotword_on", hotWordEvent))
     const whenSpeakingOff = async () => {
-        await this.sendCommand()   
+        await this.sendCommand()
         this.removeEventListener("speaking_off", whenSpeakingOff)
         this.audio.hotword.resume()
     }
@@ -18,9 +18,30 @@ export function hotword(hotWordEvent) {
     this.addEventListener("speaking_off", whenSpeakingOff)
 }
 
-export function nlpAction(event){
+export async function nlpAnswer(event) {
+    if (event.detail.payload.behavior.say) {
+        this.dispatchEvent(new CustomEvent("say_feedback_from_skill", {
+            detail: event.detail.payload
+        }))
+    }
 
+    if (event.detail.payload.behavior.ask) {
+        this.dispatchEvent(new CustomEvent("ask_feedback_from_skill", {
+            detail: event.detail.payload
+        }))
+    }
+
+    if (event.detail.payload.behavior.action) {
+        this.dispatchEvent(new CustomEvent("custom_action_from_skill", {
+            detail: event.detail.payload
+        }))
+    }
 }
+
+export function ttsLangAction(event) {
+    this.setTTSLang(event.detail.payload.value)
+}
+
 
 export function mqttConnectFail() {
 

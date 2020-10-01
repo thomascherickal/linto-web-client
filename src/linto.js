@@ -11,44 +11,60 @@ export default class Linto extends EventTarget {
         super()
         this.browser = UaDeviceDetector.parseUserAgent(window.navigator.userAgent)
         this.commandTimeout = commandTimeout
+        this.lang = "en-US" // default
         // Status
         this.commandPipeline = false
         this.streaming = false
         // Server connexion
         this.httpAuthServer = httpAuthServer
         this.requestToken = requestToken
-        this.mqtt = new MqttClient()
-        this.mqtt.addEventListener("connect", handlers.mqttConnect.bind(this))
-        this.mqtt.addEventListener("connect_fail", handlers.mqttConnectFail.bind(this))
-        this.mqtt.addEventListener("error", handlers.mqttError.bind(this))
-        this.mqtt.addEventListener("disconnect", handlers.mqttDisconnect.bind(this))
-        // Init
-        return this.login()
     }
 
     async login() {
         return new Promise(async (resolve, reject) => {
+            let auth
             try {
-                let auth = await axios.post(this.httpAuthServer, {
+                auth = await axios.post(this.httpAuthServer, {
                     "requestToken": this.requestToken
                 }, {
                     headers: {
                         "Content-Type": "application/json"
                     }
                 })
+            } catch (authFail) {
+                if (authFail.response && authFail.response.data) return reject(authFail.response.data)
+                else return reject(authFail)
+            }
+
+            try {
                 this.userInfo = auth.data.user
                 this.mqttInfo = auth.data.mqttConfig
+                this.mqtt = new MqttClient()
+                // Mqtt
+                this.mqtt.addEventListener("tts_lang", handlers.ttsLangAction.bind(this))
+                this.mqtt.addEventListener("connect", handlers.mqttConnect.bind(this))
+                this.mqtt.addEventListener("connect_fail", handlers.mqttConnectFail.bind(this))
+                this.mqtt.addEventListener("error", handlers.mqttError.bind(this))
+                this.mqtt.addEventListener("disconnect", handlers.mqttDisconnect.bind(this))
                 this.mqtt.connect(this.userInfo, this.mqttInfo)
-            } catch (e) {
-                reject(e)
+            } catch(mqttFail) {
+                return reject(mqttFail)
             }
-            resolve(this)
+            resolve(true)
         })
     }
+
+
+
     /******************************
      * Application state management
      ******************************/
-    triggerHotWord(dummyHotwordName = "dummy") {
+
+    setTTSLang(lang) {
+        this.lang = lang
+    }
+
+    triggerHotword(dummyHotwordName = "dummy") {
         this.audio.vad.dispatchEvent(new CustomEvent("speaking", {
             detail: true
         }))
@@ -57,9 +73,9 @@ export default class Linto extends EventTarget {
         }))
     }
 
-    startAudioAcquisition(useHotword = true, hotwordModel = "linto") {
+    startAudioAcquisition(useHotword = true, hotwordModel = "linto", threshold = 0.99) {
         if (!this.audio) {
-            this.audio = new Audio(this.browser.isMobile(), useHotword, hotwordModel)
+            this.audio = new Audio(this.browser.isMobile(), useHotword, hotwordModel, threshold)
             this.audio.vad.addEventListener("speakingStatus", handlers.vadStatus.bind(this))
         }
     }
@@ -87,7 +103,7 @@ export default class Linto extends EventTarget {
         if (!this.commandPipeline) {
             this.commandPipeline = true
             this.audio.hotword.addEventListener("hotword", handlers.hotword.bind(this))
-            this.mqtt.addEventListener("nlp", handlers.nlpAction.bind(this))
+            this.mqtt.addEventListener("nlp", handlers.nlpAnswer.bind(this))
         }
     }
 
@@ -95,12 +111,14 @@ export default class Linto extends EventTarget {
         if (this.commandPipeline) {
             this.commandPipeline = false
             this.audio.hotword.removeEventListener("hotword", handlers.hotword.bind(this))
-            this.mqtt.removeEventListener("nlp", handlers.nlpAction.bind(this))
+            this.mqtt.removeEventListener("nlp", handlers.nlpAnswer.bind(this))
         }
     }
 
     startStreaming() {
         if (!this.streaming) {
+            this.mqtt.addEventListener("streaming",handlers.streaming.bind(this))
+            this.mqtt.startStreaming()
             this.audio.startStreaming()
             this.streaming = true
         }
@@ -108,13 +126,11 @@ export default class Linto extends EventTarget {
 
     stopStreaming() {
         if (this.streaming) {
+            this.mqtt.removeEventListener("streaming",handlers.streaming.bind(this))
+            this.mqtt.stopStreaming()
             this.audio.stopStreaming()
             this.streaming = false
         }
-    }
-
-    transcribe(audioFile) {
-
     }
 
     /*********
@@ -122,6 +138,21 @@ export default class Linto extends EventTarget {
      *********/
     listenCommand() {
         this.audio.listenCommand()
+    }
+
+    say(lang, text) {
+        return new Promise((resolve, reject) => {
+            const toSay = new SpeechSynthesisUtterance(text)
+            toSay.lang = lang
+            toSay.onend = resolve
+            toSay.onerror = reject
+            speechSynthesis.speak(toSay)
+        })
+    }
+
+    async ask(lang, text) {
+        await this.say(lang, text)
+        this.triggerHotword()
     }
 
     async sendCommand() {
@@ -139,6 +170,7 @@ export default class Linto extends EventTarget {
                     this.dispatchEvent(new CustomEvent("command_timeout", {
                         detail: id
                     }))
+
                 }
             }, this.commandTimeout)
         } catch (e) {
@@ -150,13 +182,3 @@ export default class Linto extends EventTarget {
 }
 
 window.Linto = Linto
-
-// this.client.addListener('message',(d,p)=>{
-//     console.log("message",d,p)
-//     try {
-//         speechSynthesis.speak(new SpeechSynthesisUtterance(JSON.parse(p.toString()).behavior.say.phonetic));
-//     } catch(e){
-//         console.log(e)
-//     }
-
-// })
