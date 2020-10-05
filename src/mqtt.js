@@ -41,7 +41,7 @@ export default class MqttClient extends EventTarget {
     }
 
     async publish(topic, value, qos = 2, retain = false, requireOnline = true) {
-        return new Promise((resolve, reject)=>{
+        return new Promise((resolve, reject) => {
             value.auth_token = `WebApplication ${this.userInfo.auth_token}`
             const pubTopic = `${this.egress}/${topic}`
             const pubOptions = {
@@ -59,7 +59,7 @@ export default class MqttClient extends EventTarget {
     }
 
     async publishAudioCommand(b64Audio) {
-        return new Promise((resolve, reject)=>{
+        return new Promise((resolve, reject) => {
             const pubOptions = {
                 "qos": 0,
                 "retain": false
@@ -68,7 +68,7 @@ export default class MqttClient extends EventTarget {
             const pubTopic = `${this.egress}/nlp/file/${fileId}`
             const payload = {
                 "audio": b64Audio,
-                "auth_token":`WebApplication ${this.userInfo.auth_token}`,
+                "auth_token": `WebApplication ${this.userInfo.auth_token}`,
                 "conversationData": this.conversationData
             }
             this.client.publish(pubTopic, JSON.stringify(payload), pubOptions, (err) => {
@@ -82,9 +82,14 @@ export default class MqttClient extends EventTarget {
     disconnect() {
         this.client.end()
     }
-    
-    startStreaming(){
-        this.publish(`${this.egress}/streaming/start/`,{},2,false,true)
-    }
 
+    startStreaming(sample_rate = 16000, metadata = true) {
+        const streamingOptions = {
+            config: {
+                sample_rate,
+                metadata
+            }
+        }
+        this.publish(`streaming/start`, streamingOptions, 2, false, true)
+    }
 }

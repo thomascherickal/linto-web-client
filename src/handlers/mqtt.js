@@ -31,40 +31,38 @@ export function mqttMessage(topic, payload) {
         const topicArray = topic.split("/")
         const command = topicArray[3] // i.e nlp
         const message = new Object()
+        message.payload = JSON.parse(payload.toString())
         switch (command) {
+            // Command pipeline answers for tolinto/${sessionId}/nlp/file/${fileId}
             case "nlp":
-                message.payload = JSON.parse(payload.toString())
                 this.pendingCommandIds = this.pendingCommandIds.filter(element => element !== topicArray[5]) //removes from array of files to process
                 // Say is the final step of a ask/ask/.../say transaction
                 if (message.payload.behavior.say) this.conversationData = {}
                 // otherwise sets local conversation data to the received value
                 else if (message.payload.behavior.ask) this.conversationData = message.payload.behavior.conversationData
                 // customAction
-                if (message.payload.behavior.customAction) this.dispatchEvent(new CustomEvent(message.payload.behavior.customAction.kind, {
-                    detail: message.payload.behavior.customAction.data
-                }))
                 this.dispatchEvent(new CustomEvent(command, {
-                    detail: message
+                    detail: message.payload
                 }))
                 break
+            // Received on connection tolinto/${sessionId}/tts_lang/
             case "tts_lang":
-                message.payload = JSON.parse(payload.toString())
                 this.dispatchEvent(new CustomEvent(command, {
-                    detail: message
+                    detail: message.payload
                 }))
                 break
             case "streaming":
                 if (topicArray[4] == 'start') message.payload = JSON.parse(payload.toString()) // Received a start streaming ack
                 this.dispatchEvent(new CustomEvent("streaming_start", {
-                    detail: message
+                    detail: message.payload
                 }))
                 if (topicArray[4] == 'stop') message.payload = JSON.parse(payload.toString()) // Received a stop streaming ack
                 this.dispatchEvent(new CustomEvent("streaming_stop", {
-                    detail: message
+                    detail: message.payload
                 }))
                 if (topicArray[4] == 'chunk') message.payload = JSON.parse(payload.toString()) // Received a streaming chunk of data
                 this.dispatchEvent(new CustomEvent("streaming_chunk", {
-                    detail: message
+                    detail: message.payload
                 }))
                 break
         }

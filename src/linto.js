@@ -42,6 +42,7 @@ export default class Linto extends EventTarget {
                 this.mqtt = new MqttClient()
                 // Mqtt
                 this.mqtt.addEventListener("tts_lang", handlers.ttsLangAction.bind(this))
+                this.mqtt.addEventListener("streaming_start_ack", handlers.streamingStartAck.bind(this))
                 this.mqtt.addEventListener("connect", handlers.mqttConnect.bind(this))
                 this.mqtt.addEventListener("connect_fail", handlers.mqttConnectFail.bind(this))
                 this.mqtt.addEventListener("error", handlers.mqttError.bind(this))
@@ -115,21 +116,21 @@ export default class Linto extends EventTarget {
         }
     }
 
-    startStreaming() {
+    startStreaming(metadata = true) {
         if (!this.streaming) {
-            this.mqtt.addEventListener("streaming",handlers.streaming.bind(this))
-            this.mqtt.startStreaming()
-            this.audio.startStreaming()
             this.streaming = true
+            this.mqtt.startStreaming(this.audio.downSampler.options.targetSampleRate, metadata)
         }
     }
 
     stopStreaming() {
         if (this.streaming) {
-            this.mqtt.removeEventListener("streaming",handlers.streaming.bind(this))
+            this.streaming = false
+            this.mqtt.removeEventListener("streaming",handlers.streamingPartialAnswer.bind(this))
+            this.audio.downSampler.removeEventListener("downSamplerFrame", handlers.streamingPublishAudio.bind(this))
+            this.mqtt.addEventListener("streaming",handlers.streamingFinalAnswer.bind(this))
             this.mqtt.stopStreaming()
             this.audio.stopStreaming()
-            this.streaming = false
         }
     }
 

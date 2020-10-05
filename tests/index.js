@@ -48,7 +48,7 @@ let askFeedback = async function (event) {
 }
 
 let customHandler = async function(event){
-    console.log(`${event.type} fired`)
+    console.log(`${event.detail.behavior.customAction.kind} fired`)
 }
 
 
@@ -68,7 +68,7 @@ window.start = async function () {
         linto.addEventListener("hotword_on", hotword)
         linto.addEventListener("say_feedback_from_skill", sayFeedback)
         linto.addEventListener("ask_feedback_from_skill", askFeedback)
-        linto.addEventListener("custom1", customHandler)
+        linto.addEventListener("custom_action_from_skill", customHandler)
         await linto.login()
         linto.startAudioAcquisition(true, "linto", 0.99) // Uses hotword built in WebVoiceSDK by name / model / threshold (0.99 is fine enough)
         linto.startCommandPipeline()
