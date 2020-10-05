@@ -4,7 +4,6 @@ import MqttClient from './mqtt.js'
 import Audio from './audio.js'
 import * as handlers from './handlers/linto.js'
 import * as axios from 'axios'
-import base64Js from 'base64-js'
 
 export default class Linto extends EventTarget {
     constructor(httpAuthServer, requestToken, commandTimeout = 10000) {
@@ -19,43 +18,6 @@ export default class Linto extends EventTarget {
         this.httpAuthServer = httpAuthServer
         this.requestToken = requestToken
     }
-
-    async login() {
-        return new Promise(async (resolve, reject) => {
-            let auth
-            try {
-                auth = await axios.post(this.httpAuthServer, {
-                    "requestToken": this.requestToken
-                }, {
-                    headers: {
-                        "Content-Type": "application/json"
-                    }
-                })
-            } catch (authFail) {
-                if (authFail.response && authFail.response.data) return reject(authFail.response.data)
-                else return reject(authFail)
-            }
-
-            try {
-                this.userInfo = auth.data.user
-                this.mqttInfo = auth.data.mqttConfig
-                this.mqtt = new MqttClient()
-                // Mqtt
-                this.mqtt.addEventListener("tts_lang", handlers.ttsLangAction.bind(this))
-                this.mqtt.addEventListener("streaming_start_ack", handlers.streamingStartAck.bind(this))
-                this.mqtt.addEventListener("connect", handlers.mqttConnect.bind(this))
-                this.mqtt.addEventListener("connect_fail", handlers.mqttConnectFail.bind(this))
-                this.mqtt.addEventListener("error", handlers.mqttError.bind(this))
-                this.mqtt.addEventListener("disconnect", handlers.mqttDisconnect.bind(this))
-                this.mqtt.connect(this.userInfo, this.mqttInfo)
-            } catch(mqttFail) {
-                return reject(mqttFail)
-            }
-            resolve(true)
-        })
-    }
-
-
 
     /******************************
      * Application state management
@@ -119,16 +81,17 @@ export default class Linto extends EventTarget {
     startStreaming(metadata = true) {
         if (!this.streaming) {
             this.streaming = true
+            this.mqtt.addEventListener("streaming_start_ack",handlers.)
             this.mqtt.startStreaming(this.audio.downSampler.options.targetSampleRate, metadata)
         }
     }
 
-    stopStreaming() {
+    async stopStreaming() {
         if (this.streaming) {
             this.streaming = false
-            this.mqtt.removeEventListener("streaming",handlers.streamingPartialAnswer.bind(this))
+            this.mqtt.removeEventListener("streaming", handlers.streamingPartialAnswer.bind(this))
             this.audio.downSampler.removeEventListener("downSamplerFrame", handlers.streamingPublishAudio.bind(this))
-            this.mqtt.addEventListener("streaming",handlers.streamingFinalAnswer.bind(this))
+            this.mqtt.addEventListener("streaming", handlers.streamingFinalAnswer.bind(this))
             this.mqtt.stopStreaming()
             this.audio.stopStreaming()
         }
@@ -137,6 +100,42 @@ export default class Linto extends EventTarget {
     /*********
      * Actions
      *********/
+
+    async login() {
+        return new Promise(async (resolve, reject) => {
+            let auth
+            try {
+                auth = await axios.post(this.httpAuthServer, {
+                    "requestToken": this.requestToken
+                }, {
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                })
+            } catch (authFail) {
+                if (authFail.response && authFail.response.data) return reject(authFail.response.data)
+                else return reject(authFail)
+            }
+
+            try {
+                this.userInfo = auth.data.user
+                this.mqttInfo = auth.data.mqttConfig
+                this.mqtt = new MqttClient()
+                // Mqtt
+                this.mqtt.addEventListener("tts_lang", handlers.ttsLangAction.bind(this))
+                this.mqtt.addEventListener("streaming_start_ack", handlers.streamingStartAck.bind(this))
+                this.mqtt.addEventListener("connect", handlers.mqttConnect.bind(this))
+                this.mqtt.addEventListener("connect_fail", handlers.mqttConnectFail.bind(this))
+                this.mqtt.addEventListener("error", handlers.mqttError.bind(this))
+                this.mqtt.addEventListener("disconnect", handlers.mqttDisconnect.bind(this))
+                this.mqtt.connect(this.userInfo, this.mqttInfo)
+            } catch (mqttFail) {
+                return reject(mqttFail)
+            }
+            resolve(true)
+        })
+    }
+
     listenCommand() {
         this.audio.listenCommand()
     }

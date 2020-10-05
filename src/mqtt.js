@@ -40,6 +40,10 @@ export default class MqttClient extends EventTarget {
         this.client.addListener("message", handlers.mqttMessage.bind(this))
     }
 
+    disconnect() {
+        this.client.end()
+    }
+
     async publish(topic, value, qos = 2, retain = false, requireOnline = true) {
         return new Promise((resolve, reject) => {
             value.auth_token = `WebApplication ${this.userInfo.auth_token}`
@@ -77,10 +81,6 @@ export default class MqttClient extends EventTarget {
                 return resolve(fileId)
             })
         })
-    }
-
-    disconnect() {
-        this.client.end()
     }
 
     startStreaming(sample_rate = 16000, metadata = true) {

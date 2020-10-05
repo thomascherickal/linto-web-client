@@ -27,7 +27,7 @@ export async function mqttConnect() {
 
 export function mqttMessage(topic, payload) {
     try {
-        // exemple topc appa62499241959338bdba1e118d6988f4d/tolinto/WEB_c3dSEMd014aE/nlp/file/eiydaeji 
+        // exemple topic appa62499241959338bdba1e118d6988f4d/tolinto/WEB_c3dSEMd014aE/nlp/file/eiydaeji 
         const topicArray = topic.split("/")
         const command = topicArray[3] // i.e nlp
         const message = new Object()
@@ -53,11 +53,11 @@ export function mqttMessage(topic, payload) {
                 break
             case "streaming":
                 if (topicArray[4] == 'start') message.payload = JSON.parse(payload.toString()) // Received a start streaming ack
-                this.dispatchEvent(new CustomEvent("streaming_start", {
+                this.dispatchEvent(new CustomEvent("streaming_start_ack", {
                     detail: message.payload
                 }))
                 if (topicArray[4] == 'stop') message.payload = JSON.parse(payload.toString()) // Received a stop streaming ack
-                this.dispatchEvent(new CustomEvent("streaming_stop", {
+                this.dispatchEvent(new CustomEvent("streaming_stop_ack", {
                     detail: message.payload
                 }))
                 if (topicArray[4] == 'chunk') message.payload = JSON.parse(payload.toString()) // Received a streaming chunk of data
@@ -73,15 +73,21 @@ export function mqttMessage(topic, payload) {
     }
 }
 
-export function mqttDisconnect() {
-
+export function mqttDisconnect(e) {
+    this.dispatchEvent(new CustomEvent("mqtt_disconnect", {
+        detail: e
+    }))
 }
 
 
-export function mqttOffline() {
-
+export function mqttOffline(e) {
+    this.dispatchEvent(new CustomEvent("mqtt_offline", {
+        detail: e
+    }))
 }
 
-export function mqttError() {
-
+export function mqttError(e) {
+    this.dispatchEvent(new CustomEvent("mqtt_error", {
+        detail: e
+    }))
 }

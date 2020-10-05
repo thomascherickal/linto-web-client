@@ -1,7 +1,6 @@
 import WebVoiceSDK from '@linto-ai/webvoicesdk'
 import base64Js from 'base64-js'
 
-
 export default class Audio extends EventTarget {
     constructor(isMobile, useHotword = true, hotwordModel = "linto", threshold = 0.99) {
         super()
@@ -56,6 +55,7 @@ export default class Audio extends EventTarget {
         await this.vad.stop()
         await this.speechPreemphaser.stop()
         await this.featuresExtractor.stop()
+        await this.recorder.stop()
         if (this.useHotword) await this.hotword.stop()
         await this.mic.stop()
     }
