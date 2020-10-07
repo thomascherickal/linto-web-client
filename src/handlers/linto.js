@@ -42,8 +42,8 @@ export async function nlpAnswer(event) {
 
 
 export function streamingStartAck(event) {
-    if (event.detail.streaming){
-        this.mqtt.addEventListener("streaming", streamingPartialAnswer.bind(this))
+    console.log("Start ack called")
+    if (event.detail.behavior.streaming.status == "started"){
         this.audio.downSampler.addEventListener("downSamplerFrame", streamingPublish.bind(this))
     } else if (event.detail.error) {
         this.dispatchEvent(new CustomEvent("no_streaming", {
@@ -58,14 +58,19 @@ export function streamingStartAck(event) {
     }
 }
 
+export function streamingChunk(event){
+    console.log(event.detail.behavior.streaming.partial)
+}
+
+export function streamingStopAck(event){
+    console.log(event.detail)
+}
+
 
 export function streamingPublish(event) {
-
+    if (this.audio.vad.speaking == true) this.mqtt.publishStreamingChunk(event.detail)
 }
 
-export function streamingPartialAnswer(event) {
-
-}
 
 export function ttsLangAction(event) {
     this.setTTSLang(event.detail.value)

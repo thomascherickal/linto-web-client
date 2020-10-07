@@ -12,7 +12,7 @@
 (exemple `{"config": {"sample_rate":16000, "metadata":1 }}`)
 
 ### **Answer**
-- **topic** : `clientCode/tolinto/sn/streaming`
+- **topic** : `clientCode/tolinto/sn/streaming/start`
 - **payload** : `{"behavior":{"streaming":{"status" : "started"}}}`
 
 ## Send streaming chunk

@@ -45,25 +45,31 @@ export function mqttMessage(topic, payload) {
                     detail: message.payload
                 }))
                 break
-            // Received on connection tolinto/${sessionId}/tts_lang/
+                // Received on connection tolinto/${sessionId}/tts_lang/
             case "tts_lang":
                 this.dispatchEvent(new CustomEvent(command, {
                     detail: message.payload
                 }))
                 break
             case "streaming":
-                if (topicArray[4] == 'start') message.payload = JSON.parse(payload.toString()) // Received a start streaming ack
-                this.dispatchEvent(new CustomEvent("streaming_start_ack", {
-                    detail: message.payload
-                }))
-                if (topicArray[4] == 'stop') message.payload = JSON.parse(payload.toString()) // Received a stop streaming ack
-                this.dispatchEvent(new CustomEvent("streaming_stop_ack", {
-                    detail: message.payload
-                }))
-                if (topicArray[4] == 'chunk') message.payload = JSON.parse(payload.toString()) // Received a streaming chunk of data
-                this.dispatchEvent(new CustomEvent("streaming_chunk", {
-                    detail: message.payload
-                }))
+                if (topicArray[4] == 'start') {
+                    message.payload = JSON.parse(payload.toString()) // Received a start streaming ack
+                    this.dispatchEvent(new CustomEvent("streaming_start_ack", {
+                        detail: message.payload
+                    }))
+                }
+                if (topicArray[4] == 'stop') {
+                    message.payload = JSON.parse(payload.toString()) // Received a stop streaming ack
+                    this.dispatchEvent(new CustomEvent("streaming_stop_ack", {
+                        detail: message.payload
+                    }))
+                }
+                if (topicArray[4] == 'chunk') {
+                    message.payload = JSON.parse(payload.toString()) // Received a streaming chunk of data
+                    this.dispatchEvent(new CustomEvent("streaming_chunk", {
+                        detail: message.payload
+                    }))
+                }
                 break
         }
     } catch (e) {

@@ -83,7 +83,24 @@ export default class MqttClient extends EventTarget {
         })
     }
 
-    startStreaming(sample_rate = 16000, metadata = true) {
+    publishStreamingChunk(audioFrame) {
+        const pubOptions = {
+            "qos": 0,
+            "retain": false,
+            "properties": {
+                "payloadFormatIndicator": true
+            }
+        }
+        const pubTopic = `${this.egress}/streaming/chunk`
+        const frame = convertFloat32ToInt16(audioFrame)
+        const vue = new Uint8Array(frame)
+
+        this.client.publish(pubTopic, vue, pubOptions, (err) => {
+            if (err) console.log(err)
+        })
+    }
+
+    startStreaming(sample_rate = 16000, metadata = 1) {
         const streamingOptions = {
             config: {
                 sample_rate,
@@ -92,4 +109,17 @@ export default class MqttClient extends EventTarget {
         }
         this.publish(`streaming/start`, streamingOptions, 2, false, true)
     }
+
+    stopStreaming() {
+        this.publish(`streaming/stop`, {}, 2, false, true)
+    }
+}
+
+function convertFloat32ToInt16(buffer) {
+    let l = buffer.length;
+    let buf = new Int16Array(l);
+    while (l--) {
+        buf[l] = Math.min(1, buffer[l]) * 0x7FFF;
+    }
+    return buf.buffer;
 }

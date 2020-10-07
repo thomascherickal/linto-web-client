@@ -78,29 +78,26 @@ export default class Linto extends EventTarget {
         }
     }
 
-    startStreaming(metadata = true) {
+    startStreaming(metadata = 1) {
         if (!this.streaming) {
             this.streaming = true
-            this.mqtt.addEventListener("streaming_start_ack",handlers.)
             this.mqtt.startStreaming(this.audio.downSampler.options.targetSampleRate, metadata)
+            // We wait start streaming acknowledgment returning from MQTT before actualy start to pusblish audio frame.
         }
     }
 
     async stopStreaming() {
         if (this.streaming) {
             this.streaming = false
-            this.mqtt.removeEventListener("streaming", handlers.streamingPartialAnswer.bind(this))
-            this.audio.downSampler.removeEventListener("downSamplerFrame", handlers.streamingPublishAudio.bind(this))
-            this.mqtt.addEventListener("streaming", handlers.streamingFinalAnswer.bind(this))
+            // We immediatly stop streaming audio without waiting stop streaming acknowledgment
+            this.audio.downSampler.removeEventListener("downSamplerFrame",handlers.streamingPublish) 
             this.mqtt.stopStreaming()
-            this.audio.stopStreaming()
         }
     }
 
     /*********
      * Actions
      *********/
-
     async login() {
         return new Promise(async (resolve, reject) => {
             let auth
@@ -124,6 +121,8 @@ export default class Linto extends EventTarget {
                 // Mqtt
                 this.mqtt.addEventListener("tts_lang", handlers.ttsLangAction.bind(this))
                 this.mqtt.addEventListener("streaming_start_ack", handlers.streamingStartAck.bind(this))
+                this.mqtt.addEventListener("streaming_chunk", handlers.streamingChunk.bind(this))
+                this.mqtt.addEventListener("streaming_stop_ack", handlers.streamingStopAck.bind(this))
                 this.mqtt.addEventListener("connect", handlers.mqttConnect.bind(this))
                 this.mqtt.addEventListener("connect_fail", handlers.mqttConnectFail.bind(this))
                 this.mqtt.addEventListener("error", handlers.mqttError.bind(this))
