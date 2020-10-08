@@ -53,12 +53,14 @@ export function mqttMessage(topic, payload) {
                 break
             case "streaming":
                 if (topicArray[4] == 'start') {
+                    console.log("mqtt start")
                     message.payload = JSON.parse(payload.toString()) // Received a start streaming ack
                     this.dispatchEvent(new CustomEvent("streaming_start_ack", {
                         detail: message.payload
                     }))
                 }
                 if (topicArray[4] == 'stop') {
+                    console.log("mqtt stop")
                     message.payload = JSON.parse(payload.toString()) // Received a stop streaming ack
                     this.dispatchEvent(new CustomEvent("streaming_stop_ack", {
                         detail: message.payload
@@ -70,6 +72,13 @@ export function mqttMessage(topic, payload) {
                         detail: message.payload
                     }))
                 }
+                if (topicArray[4] == 'final') {
+                    message.payload = JSON.parse(payload.toString()) // Received a streaming chunk of data
+                    this.dispatchEvent(new CustomEvent("streaming_final", {
+                        detail: message.payload
+                    }))
+                }
+
                 break
         }
     } catch (e) {

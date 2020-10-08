@@ -41,34 +41,47 @@ export async function nlpAnswer(event) {
 }
 
 
+
+// Might be an error
 export function streamingStartAck(event) {
-    console.log("Start ack called")
+    this.streamingPublishHandler = streamingPublish.bind(this)
     if (event.detail.behavior.streaming.status == "started"){
-        this.audio.downSampler.addEventListener("downSamplerFrame", streamingPublish.bind(this))
-    } else if (event.detail.error) {
-        this.dispatchEvent(new CustomEvent("no_streaming", {
+        this.audio.downSampler.addEventListener("downSamplerFrame", this.streamingPublishHandler)
+        this.dispatchEvent(new CustomEvent("streaming_start", {
             detail: event.detail
         }))
-        this.streaming = false
+    } else if (event.detail.behavior.streaming.error) {
+        this.dispatchEvent(new CustomEvent("streaming_fail", {
+            detail: event.detail
+        }))
     } else {
-        this.dispatchEvent(new CustomEvent("no_streaming", {
+        this.dispatchEvent(new CustomEvent("streaming_fail", {
             detail: event.detail
         }))
-        this.streaming = false
     }
 }
 
+export function streamingFinal(event){
+    this.dispatchEvent(new CustomEvent("streaming_final", {
+        detail: event.detail
+    }))
+}
+
 export function streamingChunk(event){
-    console.log(event.detail.behavior.streaming.partial)
+    this.dispatchEvent(new CustomEvent("streaming_chunk", {
+        detail: event.detail
+    }))
 }
 
 export function streamingStopAck(event){
-    console.log(event.detail)
+    this.audio.downSampler.removeEventListener("downSamplerFrame", this.streamingPublishHandler)
+    this.dispatchEvent(new CustomEvent("streaming_stop", {
+        detail: event.detail
+    }))
 }
 
+export function streamingFail(event){
 
-export function streamingPublish(event) {
-    if (this.audio.vad.speaking == true) this.mqtt.publishStreamingChunk(event.detail)
 }
 
 
@@ -87,4 +100,9 @@ export function mqttError() {
 
 export function mqttDisconnect() {
 
+}
+
+// Local
+function streamingPublish(event) {
+    this.mqtt.publishStreamingChunk(event.detail)
 }

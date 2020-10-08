@@ -47,7 +47,23 @@ let askFeedback = async function (event) {
     await linto.ask(linto.lang, event.detail.behavior.ask.text)
 }
 
-let customHandler = async function(event){
+let streamingChunk = function(event){
+    console.log("Streaming chunk received ", event.detail.behavior.streaming.partial)
+}
+
+let streamingStart = function(event){
+    console.log("Streaming started with no errors")
+}
+
+let streamingFinal = function(event){
+    console.log("Streaming ended, here's the final transcript :")
+}
+
+let streamingFail = function(event){
+    console.log("Streaming cannot start :")
+}
+
+let customHandler = function(event){
     console.log(`${event.detail.behavior.customAction.kind} fired`)
 }
 
@@ -68,6 +84,10 @@ window.start = async function () {
         linto.addEventListener("hotword_on", hotword)
         linto.addEventListener("say_feedback_from_skill", sayFeedback)
         linto.addEventListener("ask_feedback_from_skill", askFeedback)
+        linto.addEventListener("streaming_chunk", streamingChunk)
+        linto.addEventListener("streaming_start", streamingStart)
+        linto.addEventListener("streaming_final", streamingFinal)
+        linto.addEventListener("streaming_fail", streamingFail)
         linto.addEventListener("custom_action_from_skill", customHandler)
         await linto.login()
         linto.startAudioAcquisition(true, "linto", 0.99) // Uses hotword built in WebVoiceSDK by name / model / threshold (0.99 is fine enough)

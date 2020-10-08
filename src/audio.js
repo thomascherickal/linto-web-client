@@ -68,13 +68,6 @@ export default class Audio extends EventTarget {
         this.mic.resume()
     }
 
-    startStreaming() {
-        this.downSampler.addEventListener()
-    }
-
-    stopStreaming() {
-        this.downSampler.removeEventListener()
-    }
 
     async listenCommand() {
         this.recorder.punchIn()

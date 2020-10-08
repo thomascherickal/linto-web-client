@@ -65,16 +65,18 @@ export default class Linto extends EventTarget {
     startCommandPipeline() {
         if (!this.commandPipeline) {
             this.commandPipeline = true
-            this.audio.hotword.addEventListener("hotword", handlers.hotword.bind(this))
-            this.mqtt.addEventListener("nlp", handlers.nlpAnswer.bind(this))
+            this.hotwordHandler = handlers.hotword.bind(this)
+            this.audio.hotword.addEventListener("hotword", this.hotwordHandler)
+            this.nlpAnswerHandler = handlers.nlpAnswer.bind(this)
+            this.mqtt.addEventListener("nlp", this.nlpAnswerHandler)
         }
     }
 
     stopCommandPipeline() {
         if (this.commandPipeline) {
             this.commandPipeline = false
-            this.audio.hotword.removeEventListener("hotword", handlers.hotword.bind(this))
-            this.mqtt.removeEventListener("nlp", handlers.nlpAnswer.bind(this))
+            this.audio.hotword.removeEventListener("hotword", this.hotwordHandler)
+            this.mqtt.removeEventListener("nlp", this.nlpAnswerHandler)
         }
     }
 
@@ -86,11 +88,10 @@ export default class Linto extends EventTarget {
         }
     }
 
-    async stopStreaming() {
+    stopStreaming() {
         if (this.streaming) {
             this.streaming = false
             // We immediatly stop streaming audio without waiting stop streaming acknowledgment
-            this.audio.downSampler.removeEventListener("downSamplerFrame",handlers.streamingPublish) 
             this.mqtt.stopStreaming()
         }
     }
@@ -123,6 +124,8 @@ export default class Linto extends EventTarget {
                 this.mqtt.addEventListener("streaming_start_ack", handlers.streamingStartAck.bind(this))
                 this.mqtt.addEventListener("streaming_chunk", handlers.streamingChunk.bind(this))
                 this.mqtt.addEventListener("streaming_stop_ack", handlers.streamingStopAck.bind(this))
+                this.mqtt.addEventListener("streaming_final", handlers.streamingFinal.bind(this))
+                this.mqtt.addEventListener("streaming_fail", handlers.streamingFail.bind(this))
                 this.mqtt.addEventListener("connect", handlers.mqttConnect.bind(this))
                 this.mqtt.addEventListener("connect_fail", handlers.mqttConnectFail.bind(this))
                 this.mqtt.addEventListener("error", handlers.mqttError.bind(this))

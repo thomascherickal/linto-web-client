@@ -94,7 +94,6 @@ export default class MqttClient extends EventTarget {
         const pubTopic = `${this.egress}/streaming/chunk`
         const frame = convertFloat32ToInt16(audioFrame)
         const vue = new Uint8Array(frame)
-
         this.client.publish(pubTopic, vue, pubOptions, (err) => {
             if (err) console.log(err)
         })
