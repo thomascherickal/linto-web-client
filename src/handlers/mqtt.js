@@ -5,19 +5,18 @@ export async function mqttConnect() {
         if (!e) {
             let payload = {
                 "connexion": "online",
-                "auth_token": `WebApplication ${this.userInfo.auth_token}`,
                 "on": new Date().toJSON()
             }
             try {
                 await this.publish('status', payload, 2, false, true)
-                this.dispatchEvent(new CustomEvent("connect"))
+                this.dispatchEvent(new CustomEvent("mqtt_connect"))
             } catch (err) {
-                this.dispatchEvent(new CustomEvent("connect_fail", {
+                this.dispatchEvent(new CustomEvent("mqtt_connect_fail", {
                     detail: err
                 }))
             }
         } else {
-            this.dispatchEvent(new CustomEvent("connect_fail", {
+            this.dispatchEvent(new CustomEvent("mqtt_connect_fail", {
                 detail: e
             }))
         }
@@ -53,14 +52,12 @@ export function mqttMessage(topic, payload) {
                 break
             case "streaming":
                 if (topicArray[4] == 'start') {
-                    console.log("mqtt start")
                     message.payload = JSON.parse(payload.toString()) // Received a start streaming ack
                     this.dispatchEvent(new CustomEvent("streaming_start_ack", {
                         detail: message.payload
                     }))
                 }
                 if (topicArray[4] == 'stop') {
-                    console.log("mqtt stop")
                     message.payload = JSON.parse(payload.toString()) // Received a stop streaming ack
                     this.dispatchEvent(new CustomEvent("streaming_stop_ack", {
                         detail: message.payload
@@ -82,7 +79,7 @@ export function mqttMessage(topic, payload) {
                 break
         }
     } catch (e) {
-        this.dispatchEvent(new CustomEvent("mqtt_message_error", {
+        this.dispatchEvent(new CustomEvent("mqtt_error", {
             detail: e
         }))
     }
@@ -96,7 +93,7 @@ export function mqttDisconnect(e) {
 
 
 export function mqttOffline(e) {
-    this.dispatchEvent(new CustomEvent("mqtt_offline", {
+    this.dispatchEvent(new CustomEvent("mqtt_disconnect", {
         detail: e
     }))
 }

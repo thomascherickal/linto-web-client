@@ -74,14 +74,15 @@ export function streamingChunk(event){
 }
 
 export function streamingStopAck(event){
-    this.audio.downSampler.removeEventListener("downSamplerFrame", this.streamingPublishHandler)
     this.dispatchEvent(new CustomEvent("streaming_stop", {
         detail: event.detail
     }))
 }
 
 export function streamingFail(event){
-
+    this.dispatchEvent(new CustomEvent("streaming_fail", {
+        detail: event.detail
+    }))
 }
 
 
@@ -90,16 +91,22 @@ export function ttsLangAction(event) {
 }
 
 
-export function mqttConnectFail() {
-
+export function mqttConnectFail(event) {
+    this.dispatchEvent(new CustomEvent("mqtt_connect_fail", {
+        detail: event.detail
+    }))
 }
 
-export function mqttError() {
-
+export function mqttError(event) {
+    this.dispatchEvent(new CustomEvent("mqtt_error", {
+        detail: event.detail
+    }))
 }
 
-export function mqttDisconnect() {
-
+export function mqttDisconnect(event) {
+    this.dispatchEvent(new CustomEvent("mqtt_disconnect", {
+        detail: event.detail
+    }))
 }
 
 // Local

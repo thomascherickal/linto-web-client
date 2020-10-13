@@ -63,7 +63,7 @@ export default class Linto extends EventTarget {
     }
 
     startCommandPipeline() {
-        if (!this.commandPipeline) {
+        if (!this.commandPipeline && this.audio) {
             this.commandPipeline = true
             this.hotwordHandler = handlers.hotword.bind(this)
             this.audio.hotword.addEventListener("hotword", this.hotwordHandler)
@@ -73,7 +73,7 @@ export default class Linto extends EventTarget {
     }
 
     stopCommandPipeline() {
-        if (this.commandPipeline) {
+        if (this.commandPipeline && this.audio) {
             this.commandPipeline = false
             this.audio.hotword.removeEventListener("hotword", this.hotwordHandler)
             this.mqtt.removeEventListener("nlp", this.nlpAnswerHandler)
@@ -81,10 +81,10 @@ export default class Linto extends EventTarget {
     }
 
     startStreaming(metadata = 1) {
-        if (!this.streaming) {
+        if (!this.streaming && this.mqtt && this.audio) {
             this.streaming = true
             this.mqtt.startStreaming(this.audio.downSampler.options.targetSampleRate, metadata)
-            // We wait start streaming acknowledgment returning from MQTT before actualy start to pusblish audio frame.
+            // We wait start streaming acknowledgment returning from MQTT before actualy start to publish audio frames.
         }
     }
 
@@ -92,6 +92,7 @@ export default class Linto extends EventTarget {
         if (this.streaming) {
             this.streaming = false
             // We immediatly stop streaming audio without waiting stop streaming acknowledgment
+            this.audio.downSampler.removeEventListener("downSamplerFrame", this.streamingPublishHandler)
             this.mqtt.stopStreaming()
         }
     }
@@ -126,16 +127,23 @@ export default class Linto extends EventTarget {
                 this.mqtt.addEventListener("streaming_stop_ack", handlers.streamingStopAck.bind(this))
                 this.mqtt.addEventListener("streaming_final", handlers.streamingFinal.bind(this))
                 this.mqtt.addEventListener("streaming_fail", handlers.streamingFail.bind(this))
-                this.mqtt.addEventListener("connect", handlers.mqttConnect.bind(this))
-                this.mqtt.addEventListener("connect_fail", handlers.mqttConnectFail.bind(this))
-                this.mqtt.addEventListener("error", handlers.mqttError.bind(this))
-                this.mqtt.addEventListener("disconnect", handlers.mqttDisconnect.bind(this))
+                this.mqtt.addEventListener("mqtt_connect", handlers.mqttConnect.bind(this))
+                this.mqtt.addEventListener("mqtt_connect_fail", handlers.mqttConnectFail.bind(this))
+                this.mqtt.addEventListener("mqtt_error", handlers.mqttError.bind(this))
+                this.mqtt.addEventListener("mqtt_disconnect", handlers.mqttDisconnect.bind(this))
                 this.mqtt.connect(this.userInfo, this.mqttInfo)
             } catch (mqttFail) {
                 return reject(mqttFail)
             }
             resolve(true)
         })
+    }
+
+    async logout(){
+        this.stopCommandPipeline()
+        this.stopStreaming()
+        this.mqtt.disconnect()
+        delete this.mqtt
     }
 
     listenCommand() {
@@ -168,7 +176,7 @@ export default class Linto extends EventTarget {
             setTimeout(() => {
                 // Check if id is still in the array of "to be processed commands"
                 // Mqtt handles itself the removal of received transcriptions
-                if (this.mqtt.pendingCommandIds.includes(id)) {
+                if (this.mqtt && this.mqtt.pendingCommandIds.includes(id)) {
                     this.dispatchEvent(new CustomEvent("command_timeout", {
                         detail: id
                     }))

@@ -35,12 +35,19 @@ export default class MqttClient extends EventTarget {
         // Listen events from this.client (mqtt client)
         this.client.addListener("connect", handlers.mqttConnect.bind(this))
         this.client.addListener("disconnect", handlers.mqttDisconnect.bind(this))
-        this.client.addListener("error", handlers.mqttError.bind(this))
         this.client.addListener("offline", handlers.mqttOffline.bind(this))
+        this.client.addListener("close", handlers.mqttOffline.bind(this))
+        this.client.addListener("error", handlers.mqttError.bind(this))
         this.client.addListener("message", handlers.mqttMessage.bind(this))
     }
 
-    disconnect() {
+    async disconnect() {
+        // Gracefuly disconnect from broker
+        const payload = {
+            "connexion": "offline",
+            "on": new Date().toJSON()
+        }
+        await this.publish('status', payload, 0, false, true)
         this.client.end()
     }
 
@@ -92,7 +99,7 @@ export default class MqttClient extends EventTarget {
             }
         }
         const pubTopic = `${this.egress}/streaming/chunk`
-        const frame = convertFloat32ToInt16(audioFrame)
+        const frame = convertFloat32ToInt16(audioFrame) // Conversion can occur on a second downsampler being spawned
         const vue = new Uint8Array(frame)
         this.client.publish(pubTopic, vue, pubOptions, (err) => {
             if (err) console.log(err)
