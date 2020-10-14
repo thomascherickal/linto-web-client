@@ -192,3 +192,4 @@ export default class Linto extends EventTarget {
 }
 
 window.Linto = Linto
+module.exports = Linto

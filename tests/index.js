@@ -1,4 +1,4 @@
-import Linto from '../src/linto.js'
+import Linto from '../dist/linto.min.js'
 
 let mqttConnectHandler = function (event) {
     console.log("mqtt up !")
